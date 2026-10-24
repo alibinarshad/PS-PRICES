@@ -1,4 +1,4 @@
-name: Build PSprices iOS Edition APK
+name: Build PSprices 2.0 Native Edition
 
 on:
   push:
@@ -15,16 +15,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
-
-      - name: Generate Android Project Files
+      - name: Generate Full Native Project Files
         run: |
           mkdir -p app/src/main/java/com/psprices/app
           mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
 
+          # 1. Project root files
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -55,6 +53,7 @@ jobs:
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           EOF
 
+          # 2. App module build.gradle with WorkManager and Material
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -68,8 +67,8 @@ jobs:
                   applicationId "com.psprices.app"
                   minSdk 24
                   targetSdk 34
-                  versionCode 1
-                  versionName "1.0-iOS"
+                  versionCode 20
+                  versionName "2.0-Native"
               }
 
               buildTypes {
@@ -83,8 +82,17 @@ jobs:
                   targetCompatibility JavaVersion.VERSION_17
               }
           }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+              implementation 'androidx.work:work-runtime:2.9.0'
+              implementation 'org.jsoup:jsoup:1.17.2'
+          }
           EOF
 
+          # 3. Vector Icons & Background Drawables
           cat << 'EOF' > app/src/main/res/drawable/ic_launcher.xml
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="128dp"
@@ -111,145 +119,321 @@ jobs:
           </vector>
           EOF
 
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          cat << 'EOF' > app/src/main/res/drawable/bg_chip_active.xml
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#2D68FF"/>
+              <corners android:radius="18dp"/>
+          </shape>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/bg_chip_inactive.xml
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#16181E"/>
+              <stroke android:width="1dp" android:color="#262932"/>
+              <corners android:radius="18dp"/>
+          </shape>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/bg_fab.xml
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#2D68FF"/>
+              <corners android:radius="24dp"/>
+          </shape>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_deals.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M21.41,11.58l-9-9C12.05,2.22 11.55,2 11,2H4c-1.1,0 -2,0.9 -2,2v7c0,0.55 0.22,1.05 0.59,1.42l9,9c0.36,0.36 0.86,0.58 1.41,0.58s1.05,-0.22 1.41,-0.59l7,-7c0.37,-0.36 0.59,-0.86 0.59,-1.41s-0.23,-1.06 -0.59,-1.42zM5.5,7C4.67,7 4,6.33 4,5.5S4.67,4 5.5,4 7,4.67 7,5.5 6.33,7 5.5,7z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_psplus.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFD700" android:pathData="M19,11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_search.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zm-6,0C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_wishlist.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_bell.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2zm6,-6v-5c0,-3.07 -1.63,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.64,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/drawable/ic_account.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFF" android:pathData="M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4 -4,1.79 -4,4 1.79,4 4,4zm0,2c-2.67,0 -8,1.34 -8,4v2h16v-2c0,-2.66 -5.33,-4 -8,-4z"/>
+          </vector>
+          EOF
+
+          # 4. XML Layout: Native Headers, Chips, Alerts Pill & Tab Bar
+          cat << 'EOF' > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#000000">
 
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <RelativeLayout
+                  android:id="@+id/nativeTopHeader"
+                  android:layout_width="match_parent"
+                  android:layout_height="56dp"
+                  android:layout_alignParentTop="true"
+                  android:background="#08090C"
+                  android:paddingStart="16dp"
+                  android:paddingEnd="12dp">
 
-              <application
-                  android:allowBackup="true"
-                  android:icon="@drawable/ic_launcher"
-                  android:label="PSprices"
-                  android:usesCleartextTraffic="true"
-                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:configChanges="orientation|screenSize|keyboardHidden">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+                  <TextView
+                      android:id="@+id/headerTitle"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_centerVertical="true"
+                      android:text="PSprices"
+                      android:textColor="#FFFFFF"
+                      android:textSize="21sp"
+                      android:textStyle="bold"/>
 
-          cat << 'EOF' > app/src/main/java/com/psprices/app/MainActivity.java
-          package com.psprices.app;
+                  <LinearLayout
+                      android:layout_width="wrap_content"
+                      android:layout_height="match_parent"
+                      android:layout_alignParentEnd="true"
+                      android:gravity="center_vertical"
+                      android:orientation="horizontal">
 
-          import android.app.Activity;
-          import android.content.Intent;
-          import android.graphics.Color;
-          import android.net.Uri;
-          import android.os.Bundle;
-          import android.view.KeyEvent;
-          import android.view.Window;
-          import android.webkit.CookieManager;
-          import android.webkit.WebResourceRequest;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
+                      <TextView
+                          android:id="@+id/btnRegion"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:gravity="center"
+                          android:paddingStart="12dp"
+                          android:paddingEnd="12dp"
+                          android:text="🇮🇳 IN ₹"
+                          android:textColor="#FFFFFF"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
 
-          public class MainActivity extends Activity {
-              private WebView webView;
+                      <ImageView
+                          android:id="@+id/btnAlertsCenter"
+                          android:layout_width="38dp"
+                          android:layout_height="38dp"
+                          android:layout_marginStart="8dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:padding="8dp"
+                          android:src="@drawable/ic_bell"/>
+                  </LinearLayout>
+              </RelativeLayout>
 
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+              <HorizontalScrollView
+                  android:id="@+id/chipScroll"
+                  android:layout_width="match_parent"
+                  android:layout_height="46dp"
+                  android:layout_below="@id/nativeTopHeader"
+                  android:background="#08090C"
+                  android:scrollbars="none"
+                  android:paddingStart="12dp"
+                  android:paddingEnd="12dp">
 
-                  Window window = getWindow();
-                  window.setStatusBarColor(Color.parseColor("#111317"));
-                  window.setNavigationBarColor(Color.parseColor("#16181D"));
+                  <LinearLayout
+                      android:layout_width="wrap_content"
+                      android:layout_height="match_parent"
+                      android:gravity="center_vertical"
+                      android:orientation="horizontal">
 
-                  webView = new WebView(this);
-                  webView.setBackgroundColor(Color.parseColor("#111317"));
-                  setContentView(webView);
+                      <TextView
+                          android:id="@+id/chipAllDeals"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:layout_marginEnd="8dp"
+                          android:background="@drawable/bg_chip_active"
+                          android:gravity="center"
+                          android:paddingStart="14dp"
+                          android:paddingEnd="14dp"
+                          android:text="🔥 Hot Deals"
+                          android:textColor="#FFFFFF"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
 
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setLoadWithOverviewMode(true);
-                  settings.setUseWideViewPort(true);
-                  settings.setSupportZoom(true);
-                  settings.setBuiltInZoomControls(true);
-                  settings.setDisplayZoomControls(false);
-                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-                  settings.setUserAgentString(
-                      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
-                  );
+                      <TextView
+                          android:id="@+id/chipPsPlus"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:layout_marginEnd="8dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:gravity="center"
+                          android:paddingStart="14dp"
+                          android:paddingEnd="14dp"
+                          android:text="➕ PS Plus Discounts"
+                          android:textColor="#FFD700"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
 
-                  CookieManager cookieManager = CookieManager.getInstance();
-                  cookieManager.setAcceptCookie(true);
-                  cookieManager.setAcceptThirdPartyCookies(webView, true);
+                      <TextView
+                          android:id="@+id/chipLowest"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:layout_marginEnd="8dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:gravity="center"
+                          android:paddingStart="14dp"
+                          android:paddingEnd="14dp"
+                          android:text="💎 Lowest Price Ever"
+                          android:textColor="#E0E0E0"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
 
-                  webView.setWebViewClient(new WebViewClient() {
-                      @Override
-                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                          String url = request.getUrl().toString();
-                          if (url.contains("store.playstation.com") || url.startsWith("market://")) {
-                              try {
-                                  startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                                  return true;
-                              } catch (Exception ignored) {}
-                          }
-                          return false;
-                      }
+                      <TextView
+                          android:id="@+id/chipPs5"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:layout_marginEnd="8dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:gravity="center"
+                          android:paddingStart="14dp"
+                          android:paddingEnd="14dp"
+                          android:text="🎮 PS5"
+                          android:textColor="#E0E0E0"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
 
-                      @Override
-                      public void onPageFinished(WebView view, String url) {
-                          // Removes promo banners and headers for an iOS-clean display
-                          String jsClean = "javascript:(function() {" +
-                              "var banner = document.querySelector('.app-banner, [href*=\"/mobile/\"], [href*=\"apple.com\"]');" +
-                              "if(banner) banner.style.display = 'none';" +
-                              "})()";
-                          view.evaluateJavascript(jsClean, null);
-                      }
-                  });
+                      <TextView
+                          android:id="@+id/chipPs4"
+                          android:layout_width="wrap_content"
+                          android:layout_height="32dp"
+                          android:layout_marginEnd="8dp"
+                          android:background="@drawable/bg_chip_inactive"
+                          android:gravity="center"
+                          android:paddingStart="14dp"
+                          android:paddingEnd="14dp"
+                          android:text="🕹️ PS4"
+                          android:textColor="#E0E0E0"
+                          android:textSize="12sp"
+                          android:textStyle="bold"/>
+                  </LinearLayout>
+              </HorizontalScrollView>
 
-                  if (savedInstanceState == null) {
-                      webView.loadUrl("https://psprices.com/");
-                  } else {
-                      webView.restoreState(savedInstanceState);
-                  }
-              }
+              <ProgressBar
+                  android:id="@+id/progressBar"
+                  style="?android:attr/progressBarStyleHorizontal"
+                  android:layout_width="match_parent"
+                  android:layout_height="2dp"
+                  android:layout_below="@id/chipScroll"
+                  android:indeterminate="false"
+                  android:max="100"
+                  android:progressTint="#2D68FF"
+                  android:visibility="gone"/>
 
-              @Override
-              protected void onSaveInstanceState(Bundle outState) {
-                  super.onSaveInstanceState(outState);
-                  if (webView != null) {
-                      webView.saveState(outState);
-                  }
-              }
+              <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                  android:id="@+id/swipeRefresh"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:layout_below="@id/progressBar"
+                  android:layout_above="@id/bottomBarDivider">
 
-              @Override
-              protected void onPause() {
-                  super.onPause();
-                  CookieManager.getInstance().flush();
-              }
+                  <WebView
+                      android:id="@+id/webView"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:background="#000000"/>
+              </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-              @Override
-              public boolean onKeyDown(int keyCode, KeyEvent event) {
-                  if (keyCode == KeyEvent.KEYCODE_BACK && webView != null && webView.canGoBack()) {
-                      webView.goBack();
-                      return true;
-                  }
-                  return super.onKeyDown(keyCode, event);
-              }
-          }
-          EOF
+              <LinearLayout
+                  android:id="@+id/fabTrackGame"
+                  android:layout_width="wrap_content"
+                  android:layout_height="44dp"
+                  android:layout_above="@id/bottomBarDivider"
+                  android:layout_alignParentEnd="true"
+                  android:layout_marginEnd="16dp"
+                  android:layout_marginBottom="16dp"
+                  android:background="@drawable/bg_fab"
+                  android:elevation="8dp"
+                  android:gravity="center"
+                  android:orientation="horizontal"
+                  android:paddingStart="16dp"
+                  android:paddingEnd="16dp">
 
-      - name: Build PSprices APK
-        run: |
-          gradle assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk PSprices-iOS-Edition.apk
+                  <ImageView
+                      android:layout_width="18dp"
+                      android:layout_height="18dp"
+                      android:src="@drawable/ic_bell"/>
 
-      - name: Upload PSprices APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: PSprices-iOS-Edition-APK
-          path: PSprices-iOS-Edition.apk
-          
+                  <TextView
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginStart="8dp"
+                      android:text="Track Price Alert"
+                      android:textColor="#FFFFFF"
+                      android:textSize="13sp"
+                      android:textStyle="bold"/>
+              </LinearLayout>
+
+              <View
+                  android:id="@+id/bottomBarDivider"
+                  android:layout_width="match_parent"
+                  android:layout_height="1dp"
+                  android:layout_above="@id/bottomNavigation"
+                  android:background="#1A1D24"/>
+
+              <LinearLayout
+                  android:id="@+id/bottomNavigation"
+                  android:layout_width="match_parent"
+                  android:layout_height="60dp"
+                  android:layout_alignParentBottom="true"
+                  android:background="#08090C"
+                  android:orientation="horizontal"
+                  android:weightSum="5">
+
+                  <LinearLayout
+                      android:id="@+id/tabDeals"
+                      android:layout_width="0dp"
+                      android:layout_height="match_parent"
+                      android:layout_weight="1"
+                      android:gravity="center"
+                      android:orientation="vertical">
+                      <ImageView
+                          android:id="@+id/iconDeals"
+                          android:layout_width="22dp"
+                          android:layout_height="22dp"
+                          android:src="@drawable/ic_deals"/>
+                      <TextView
+                          android:id="@+id/textDeals"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:layout_marginTop="3dp"
+                          android:text="Deals"
+                          android:textSize="10sp"
+                          android:textStyle="bold"/>
+                  </LinearLayout>
+
+                  <LinearLayout
+                      android:id="@+id/tabPsPlus"
+                      android:layout_width="0dp"
+                      android:layout_height="match_parent"
+                      android:layout_weight="1"
+                      android:gravity="center"
+                      android:orientation="vertical">
+                      <ImageView
+                          android:id="@+id/iconPsPlus"
+                          android:layout_width="22dp"
+                          android:layout_height="22dp"
+                          android:src="@drawable/ic_psplus"/>
+                      <TextView
+                          android:id="@+id/textPsPlus"
+                          android:layout_
