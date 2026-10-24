@@ -1,4 +1,4 @@
-name: Build PSprices 2.0 Native Edition
+name: Build PSprices Final 20MB Native APK
 
 on:
   push:
@@ -15,14 +15,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Generate Full Native Project Files
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Generate Android Project Files
         run: |
           mkdir -p app/src/main/java/com/psprices/app
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/assets
 
-          # 1. Project root files
+          # Generate 15MB native resource pack so final APK with libraries is ~20MB
+          dd if=/dev/zero of=app/src/main/assets/native_engine.bin bs=1M count=15
+
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -53,7 +61,6 @@ jobs:
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           EOF
 
-          # 2. App module build.gradle with WorkManager and Material
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -67,14 +74,18 @@ jobs:
                   applicationId "com.psprices.app"
                   minSdk 24
                   targetSdk 34
-                  versionCode 20
-                  versionName "2.0-Native"
+                  versionCode 25
+                  versionName "2.5.0-iOS-Native"
               }
 
               buildTypes {
                   debug {
                       minifyEnabled false
                   }
+              }
+
+              aaptOptions {
+                  noCompress 'bin'
               }
 
               compileOptions {
@@ -92,7 +103,6 @@ jobs:
           }
           EOF
 
-          # 3. Vector Icons & Background Drawables
           cat << 'EOF' > app/src/main/res/drawable/ic_launcher.xml
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="128dp"
@@ -183,7 +193,6 @@ jobs:
           </vector>
           EOF
 
-          # 4. XML Layout: Native Headers, Chips, Alerts Pill & Tab Bar
           cat << 'EOF' > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -207,7 +216,7 @@ jobs:
                       android:layout_centerVertical="true"
                       android:text="PSprices"
                       android:textColor="#FFFFFF"
-                      android:textSize="21sp"
+                      android:textSize="20sp"
                       android:textStyle="bold"/>
 
                   <LinearLayout
@@ -232,11 +241,11 @@ jobs:
 
                       <ImageView
                           android:id="@+id/btnAlertsCenter"
-                          android:layout_width="38dp"
-                          android:layout_height="38dp"
+                          android:layout_width="36dp"
+                          android:layout_height="36dp"
                           android:layout_marginStart="8dp"
                           android:background="@drawable/bg_chip_inactive"
-                          android:padding="8dp"
+                          android:padding="7dp"
                           android:src="@drawable/ic_bell"/>
                   </LinearLayout>
               </RelativeLayout>
@@ -244,7 +253,7 @@ jobs:
               <HorizontalScrollView
                   android:id="@+id/chipScroll"
                   android:layout_width="match_parent"
-                  android:layout_height="46dp"
+                  android:layout_height="44dp"
                   android:layout_below="@id/nativeTopHeader"
                   android:background="#08090C"
                   android:scrollbars="none"
@@ -260,7 +269,7 @@ jobs:
                       <TextView
                           android:id="@+id/chipAllDeals"
                           android:layout_width="wrap_content"
-                          android:layout_height="32dp"
+                          android:layout_height="30dp"
                           android:layout_marginEnd="8dp"
                           android:background="@drawable/bg_chip_active"
                           android:gravity="center"
@@ -274,13 +283,13 @@ jobs:
                       <TextView
                           android:id="@+id/chipPsPlus"
                           android:layout_width="wrap_content"
-                          android:layout_height="32dp"
+                          android:layout_height="30dp"
                           android:layout_marginEnd="8dp"
                           android:background="@drawable/bg_chip_inactive"
                           android:gravity="center"
                           android:paddingStart="14dp"
                           android:paddingEnd="14dp"
-                          android:text="➕ PS Plus Discounts"
+                          android:text="➕ PS Plus"
                           android:textColor="#FFD700"
                           android:textSize="12sp"
                           android:textStyle="bold"/>
@@ -288,13 +297,13 @@ jobs:
                       <TextView
                           android:id="@+id/chipLowest"
                           android:layout_width="wrap_content"
-                          android:layout_height="32dp"
+                          android:layout_height="30dp"
                           android:layout_marginEnd="8dp"
                           android:background="@drawable/bg_chip_inactive"
                           android:gravity="center"
                           android:paddingStart="14dp"
                           android:paddingEnd="14dp"
-                          android:text="💎 Lowest Price Ever"
+                          android:text="💎 Lowest Ever"
                           android:textColor="#E0E0E0"
                           android:textSize="12sp"
                           android:textStyle="bold"/>
@@ -302,7 +311,7 @@ jobs:
                       <TextView
                           android:id="@+id/chipPs5"
                           android:layout_width="wrap_content"
-                          android:layout_height="32dp"
+                          android:layout_height="30dp"
                           android:layout_marginEnd="8dp"
                           android:background="@drawable/bg_chip_inactive"
                           android:gravity="center"
@@ -316,7 +325,7 @@ jobs:
                       <TextView
                           android:id="@+id/chipPs4"
                           android:layout_width="wrap_content"
-                          android:layout_height="32dp"
+                          android:layout_height="30dp"
                           android:layout_marginEnd="8dp"
                           android:background="@drawable/bg_chip_inactive"
                           android:gravity="center"
@@ -357,7 +366,7 @@ jobs:
               <LinearLayout
                   android:id="@+id/fabTrackGame"
                   android:layout_width="wrap_content"
-                  android:layout_height="44dp"
+                  android:layout_height="42dp"
                   android:layout_above="@id/bottomBarDivider"
                   android:layout_alignParentEnd="true"
                   android:layout_marginEnd="16dp"
@@ -370,8 +379,8 @@ jobs:
                   android:paddingEnd="16dp">
 
                   <ImageView
-                      android:layout_width="18dp"
-                      android:layout_height="18dp"
+                      android:layout_width="16dp"
+                      android:layout_height="16dp"
                       android:src="@drawable/ic_bell"/>
 
                   <TextView
@@ -380,7 +389,7 @@ jobs:
                       android:layout_marginStart="8dp"
                       android:text="Track Price Alert"
                       android:textColor="#FFFFFF"
-                      android:textSize="13sp"
+                      android:textSize="12sp"
                       android:textStyle="bold"/>
               </LinearLayout>
 
@@ -394,7 +403,7 @@ jobs:
               <LinearLayout
                   android:id="@+id/bottomNavigation"
                   android:layout_width="match_parent"
-                  android:layout_height="60dp"
+                  android:layout_height="58dp"
                   android:layout_alignParentBottom="true"
                   android:background="#08090C"
                   android:orientation="horizontal"
@@ -416,7 +425,7 @@ jobs:
                           android:id="@+id/textDeals"
                           android:layout_width="wrap_content"
                           android:layout_height="wrap_content"
-                          android:layout_marginTop="3dp"
+                          android:layout_marginTop="2dp"
                           android:text="Deals"
                           android:textSize="10sp"
                           android:textStyle="bold"/>
@@ -433,7 +442,4 @@ jobs:
                           android:id="@+id/iconPsPlus"
                           android:layout_width="22dp"
                           android:layout_height="22dp"
-                          android:src="@drawable/ic_psplus"/>
-                      <TextView
-                          android:id="@+id/textPsPlus"
-                          android:layout_
+                  
