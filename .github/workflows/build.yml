@@ -20,27 +20,25 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Fetch Official iOS App Store Icon & Generate 42MB Native Bundle
+      - name: Generate Android Project Files
         run: |
           mkdir -p app/src/main/java/com/psprices/app
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
-          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/res/mipmap-xxhdpi
 
-          # 1. Fetch official 512x512 icon directly from Apple App Store API (ID: 1550840173)
+          # Fetch official 512x512 icon from App Store API
           ICON_URL=$(curl -s "https://itunes.apple.com/lookup?id=1550840173" | jq -r '.results[0].artworkUrl512 // empty')
           if [ -n "$ICON_URL" ]; then
-            curl -sL "$ICON_URL" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            curl -sL "$ICON_URL" -o app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           fi
 
-          # Fallback PNG generator if Apple CDN is unreachable
           python3 - << 'PYEOF'
           import os, zlib, struct
-          path = "app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+          path = "app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
           if not os.path.exists(path) or os.path.getsize(path) < 1000:
-              w, h = 256, 256
+              w, h = 192, 192
               raw = b""
               for y in range(h):
                   raw += b"\x00"
@@ -53,11 +51,6 @@ jobs:
                   f.write(png)
           PYEOF
 
-          # 2. Generate 42MB uncompressed native cache resource to match iOS 42.1 MB App Store footprint
-          dd if=/dev/urandom of=app/src/main/assets/ios_native_cache.bin bs=1M count=42
-
-      - name: Generate Android 2.0 Project Files
-        run: |
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -85,7 +78,7 @@ jobs:
 
           cat << 'EOF' > gradle.properties
           android.useAndroidX=true
-          org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           EOF
 
           cat << 'EOF' > app/build.gradle
@@ -111,10 +104,6 @@ jobs:
                   }
               }
 
-              androidResources {
-                  noCompress 'bin'
-              }
-
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
@@ -130,7 +119,6 @@ jobs:
           }
           EOF
 
-          # Vector Icons for Native UI
           cat << 'EOF' > app/src/main/res/drawable/bg_chip_active.xml
           <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
               <solid android:color="#2D68FF"/>
@@ -195,7 +183,6 @@ jobs:
           </vector>
           EOF
 
-          # Main Layout: 90% Native Controls + Stripped Content Surface
           cat << 'EOF' > app/src/main/res/layout/activity_main.xml
           <?xml version="1.0" encoding="utf-8"?>
           <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -203,7 +190,6 @@ jobs:
               android:layout_height="match_parent"
               android:background="#000000">
 
-              <!-- Native iOS Large Header Bar -->
               <RelativeLayout
                   android:id="@+id/nativeTopHeader"
                   android:layout_width="match_parent"
@@ -254,7 +240,6 @@ jobs:
                   </LinearLayout>
               </RelativeLayout>
 
-              <!-- Native PS Plus & Deals Filter Chip Bar -->
               <HorizontalScrollView
                   android:id="@+id/chipScroll"
                   android:layout_width="match_parent"
@@ -368,7 +353,6 @@ jobs:
                       android:background="#000000"/>
               </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-              <!-- Native Floating Price Alert Action Pill -->
               <LinearLayout
                   android:id="@+id/fabTrackGame"
                   android:layout_width="wrap_content"
@@ -406,7 +390,6 @@ jobs:
                   android:layout_above="@id/bottomNavigation"
                   android:background="#1A1D24"/>
 
-              <!-- Native iOS 5-Tab Bar -->
               <LinearLayout
                   android:id="@+id/bottomNavigation"
                   android:layout_width="match_parent"
@@ -439,4 +422,21 @@ jobs:
                   </LinearLayout>
 
                   <LinearLayout
-                      android:id="@+id/tabPsPlus
+                      android:id="@+id/tabPsPlus"
+                      android:layout_width="0dp"
+                      android:layout_height="match_parent"
+                      android:layout_weight="1"
+                      android:gravity="center"
+                      android:orientation="vertical">
+                      <ImageView
+                          android:id="@+id/iconPsPlus"
+                          android:layout_width="22dp"
+                          android:layout_height="22dp"
+                          android:src="@drawable/ic_psplus"/>
+                      <TextView
+                          android:id="@+id/textPsPlus"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:layout_marginTop="3dp"
+                          android:text="PS Plus"
+           
